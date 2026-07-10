@@ -4,9 +4,301 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Last Summer Cafe POS - Dijital Otomasyon Paneli</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"></link>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        // Yeni oluşturduğunuz Google Apps Script Web Uygulaması URL'niz buraya entegre edildi
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbwpVmJytRPAeuSbTgQbFpmJ5e2z3zDkof3NZYWGNXxPM7GpiXSdWDGs8wN0F9-MnuJb7g/exec';
+
+        let appData = {
+            orders: [],
+            expenses: []
+        };
+
+        // Fiyatı otomatik dolduran fonksiyon
+        function updateProductPrice() {
+            const selectEl = document.getElementById('orderItem');
+            const selectedOption = selectEl.options[selectEl.selectedIndex];
+            const price = selectedOption.getAttribute('data-price');
+            
+            if (price) {
+                document.getElementById('orderAmount').value = price;
+            }
+        }
+
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('liveClock').innerText = now.toTimeString().split(' ')[0];
+        }, 1000);
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const msg = document.getElementById('toastMessage');
+            
+            icon.innerText = isError ? "❌" : "✅";
+            msg.innerText = message;
+            
+            toast.className = `fixed bottom-6 right-6 transform translate-y-0 opacity-100 px-5 py-3 rounded-xl shadow-xl transition-all duration-300 text-sm flex items-center space-x-2 z-50 ${isError ? 'bg-rose-600 text-white' : 'bg-gray-900 text-white'}`;
+            
+            setTimeout(() => {
+                toast.className = "fixed bottom-6 right-6 transform translate-y-20 opacity-0 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl transition-all duration-300 text-sm flex items-center space-x-2 z-50";
+            }, 3000);
+        }
+
+        function initApp() {
+            updateCalculations();
+            document.getElementById('openingCash').addEventListener('input', updateCalculations);
+            document.getElementById('orderForm').addEventListener('submit', handleOrderSubmit);
+            document.getElementById('expenseForm').addEventListener('submit', handleExpenseSubmit);
+            fetchDataFromGoogleSheets();
+        }
+
+        // Google E-Tablodan verileri çeken fonksiyon (syncAll yapısına uyumlu hale getirildi)
+        function fetchDataFromGoogleSheets() {
+            const statusEl = document.getElementById('dbStatus');
+            fetch(scriptURL)
+                .then(response => response.json())
+                .then(data => {
+                    // E-Tablodaki sekmelerden gelen verileri appData içerisine aktarıyoruz
+                    appData.orders = data.Siparişler || [];
+                    appData.expenses = data.Giderler || [];
+                    
+                    // Gelen verilerdeki tablo başlıklarını (id, zaman vb.) sitenin anlayacağı dile (urun, tur, tutar) çeviriyoruz
+                    appData.orders = appData.orders.map(item => ({
+                        id: item.id,
+                        zaman: item.time,
+                        urun: item.table, // Siteniz tablo/ürün bilgisini urun alanında gösteriyor
+                        tur: item.payment,
+                        tutar: item.total
+                    }));
+
+                    appData.expenses = appData.expenses.map(item => ({
+                        id: item.id,
+                        zaman: item.zaman,
+                        urun: item.urun,
+                        tur: item.tur,
+                        tutar: item.tutar
+                    }));
+
+                    renderTables();
+                    updateCalculations();
+                    statusEl.className = "flex items-center text-xs bg-emerald-950/40 text-emerald-400 border border-emerald-800/50 px-2.5 py-1.5 rounded-lg";
+                    statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 mr-2"></span>Bulut Veritabanı Aktif';
+                })
+                .catch(err => {
+                    console.error(err);
+                    statusEl.className = "flex items-center text-xs bg-rose-950/40 text-rose-400 border border-rose-800/50 px-2.5 py-1.5 rounded-lg";
+                    statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500 mr-2"></span>Çevrimdışı (Yerel Mod)';
+                    showToast("Google Veritabanına bağlanılamadı, işlemler tarayıcıda tutulacak.", true);
+                });
+        }
+
+        function renderTables() {
+            const orderBody = document.getElementById('orderTableBody');
+            const expenseBody = document.getElementById('expenseTableBody');
+            orderBody.innerHTML = '';
+            expenseBody.innerHTML = '';
+            
+            document.getElementById('noOrders').style.display = appData.orders.length === 0 ? 'block' : 'none';
+            document.getElementById('noExpenses').style.display = appData.expenses.length === 0 ? 'block' : 'none';
+            document.getElementById('orderCount').innerText = `${appData.orders.length} Sipariş`;
+            document.getElementById('expenseCount').innerText = `${appData.expenses.length} Gider`;
+
+            appData.orders.forEach((item) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3 px-6 text-xs text-gray-400 font-mono">${item.zaman || ''}</td>
+                    <td class="py-3 px-6 font-medium text-gray-700">${item.urun || ''}</td>
+                    <td class="py-3 px-6"><span class="px-2 py-0.5 rounded-md text-[11px] font-semibold ${item.tur === 'Nakit' ? 'bg-emerald-50 text-emerald-700' : item.tur === 'Kredi Kartı' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}">${item.tur || ''}</span></td>
+                    <td class="py-3 px-6 text-right font-bold text-gray-700">${parseFloat(item.tutar || 0).toFixed(2)} ₺</td>
+                    <td class="py-3 px-4 text-center pdf-exclude"><button onclick="deleteRow('${item.id}', 'order')" class="text-gray-300 hover:text-rose-500 transition-colors p-1">🗑️</button></td>
+                `;
+                orderBody.appendChild(tr);
+            });
+
+            appData.expenses.forEach((item) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3 px-6 text-xs text-gray-400 font-mono">${item.zaman || ''}</td>
+                    <td class="py-3 px-6 font-medium text-gray-700">${item.urun || ''}</td>
+                    <td class="py-3 px-6"><span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-700">${item.tur || 'Gider'}</span></td>
+                    <td class="py-3 px-6 text-right font-bold text-rose-600">-${parseFloat(item.tutar || 0).toFixed(2)} ₺</td>
+                    <td class="py-3 px-4 text-center pdf-exclude"><button onclick="deleteRow('${item.id}', 'expense')" class="text-gray-300 hover:text-rose-500 transition-colors p-1">🗑️</button></td>
+                `;
+                expenseBody.appendChild(tr);
+            });
+        }
+
+        function updateCalculations() {
+            const openingCash = parseFloat(document.getElementById('openingCash').value) || 0;
+            const totalRevenue = appData.orders.reduce((sum, item) => sum + (parseFloat(item.tutar) || 0), 0);
+            const totalExpenses = appData.expenses.reduce((sum, item) => sum + (parseFloat(item.tutar) || 0), 0);
+            const netBalance = openingCash + totalRevenue - totalExpenses;
+
+            document.getElementById('totalRevenue').innerText = totalRevenue.toFixed(2) + " ₺";
+            document.getElementById('totalExpenses').innerText = totalExpenses.toFixed(2) + " ₺";
+            document.getElementById('netBalance').innerText = netBalance.toFixed(2) + " ₺";
+        }
+
+        function handleOrderSubmit(e) {
+            e.preventDefault();
+            const inputItem = document.getElementById('orderItem');
+            const inputAmount = document.getElementById('orderAmount');
+            const inputPayment = document.getElementById('orderPayment');
+            
+            const uniqueId = 'ORD-' + Date.now();
+            const timeStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+            const rowData = {
+                id: uniqueId,
+                zaman: timeStr,
+                urun: inputItem.value,
+                tur: inputPayment.value,
+                tutar: parseFloat(inputAmount.value).toFixed(2)
+            };
+
+            appData.orders.push(rowData);
+            renderTables();
+            updateCalculations();
+            
+            // Veriyi anlık olarak Google E-Tabloya gönderiyoruz
+            sendAllDataToGoogleSheets();
+            
+            inputItem.selectedIndex = 0;
+            inputAmount.value = '';
+        }
+
+        function handleExpenseSubmit(e) {
+            e.preventDefault();
+            const inputItem = document.getElementById('expenseItem');
+            const inputAmount = document.getElementById('expenseAmount');
+            const inputCategory = document.getElementById('expenseCategory');
+            
+            const uniqueId = 'EXP-' + Date.now();
+            const timeStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+            const rowData = {
+                id: uniqueId,
+                zaman: timeStr,
+                urun: inputItem.value,
+                tur: inputCategory.value,
+                tutar: parseFloat(inputAmount.value).toFixed(2)
+            };
+
+            appData.expenses.push(rowData);
+            renderTables();
+            updateCalculations();
+            
+            // Veriyi anlık olarak Google E-Tabloya gönderiyoruz
+            sendAllDataToGoogleSheets();
+            
+            inputItem.value = '';
+            inputAmount.value = '';
+        }
+
+        // Sitenizdeki tüm verileri E-Tablonuzdaki sekmelere topluca gönderen yeni akıllı fonksiyon
+        function sendAllDataToGoogleSheets() {
+            // Apps script kodundaki sütun sıralamasına göre verileri hazırlıyoruz
+            const productsFormatted = []; // Eğer ilerde ürünler sekmesini de doldurmak isterseniz buraya ekleme yapabilirsiniz.
+            const stocksFormatted = [];
+            
+            const expensesFormatted = appData.expenses.map(ex => ({
+                id: ex.id,
+                zaman: ex.zaman,
+                urun: ex.urun,
+                tur: ex.tur,
+                tutar: ex.tutar
+            }));
+
+            const ordersFormatted = appData.orders.map(o => ({
+                id: o.id,
+                time: o.zaman,
+                table: o.urun,     // Sitenizdeki 'urun' bilgisini E-Tabloda 'table' sütununa yazar
+                payment: o.tur,    // Ödeme türü -> payment
+                total: o.tutar,    // Tutar -> total
+                profit: (parseFloat(o.tutar) * 0.7).toFixed(2), // Örnek kâr marjı hesabı (%70)
+                items: "[]"
+            }));
+
+            const veriPaketi = {
+                action: "syncAll",
+                products: productsFormatted,
+                stocks: stocksFormatted,
+                expenses: expensesFormatted,
+                orders: ordersFormatted
+            };
+
+            fetch(scriptURL, {
+                method: 'POST',
+                mode: 'no-cors', // CORS engeline takılmamak için şarttır
+                cache: 'no-cache',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(veriPaketi)
+            })
+            .then(() => {
+                showToast("İşlem başarıyla buluta kaydedildi.");
+            })
+            .catch(err => {
+                console.error(err);
+                showToast("Bağlantı hatası: İşlem yerel bellekte kaldı.", true);
+            });
+        }
+
+        function deleteRow(id, type) {
+            if(!confirm("Bu işlemi silmek istediğinize emin misiniz?")) return;
+            if(type === 'order') {
+                appData.orders = appData.orders.filter(item => item.id !== id);
+            } else {
+                appData.expenses = appData.expenses.filter(item => item.id !== id);
+            }
+            
+            renderTables();
+            updateCalculations();
+            // Silme işleminden sonra da bulut veritabanını güncelliyoruz
+            sendAllDataToGoogleSheets();
+        }
+
+        function downloadPDF() {
+            const element = document.body;
+            const pdfHeader = document.getElementById("pdfHeader");
+            const now = new Date();
+            
+            document.getElementById("pdfDate").innerText = now.toLocaleDateString('tr-TR') + " - " + now.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
+            pdfHeader.style.display = "flex";
+
+            const openingInput = document.getElementById("openingCash");
+            let replacement = null;
+            if (openingInput) {
+                replacement = document.createElement("span");
+                replacement.className = "text-2xl font-bold text-gray-700";
+                replacement.innerText = parseFloat(openingInput.value).toFixed(2) + " ₺";
+                openingInput.style.display = "none";
+                openingInput.parentNode.appendChild(replacement);
+            }
+
+            const options = {
+                margin: [10, 10, 10, 10],
+                filename: `Last_Summer_Cafe_GunSonu_${now.toISOString().split('T')[0]}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            document.querySelectorAll(".pdf-exclude").forEach(el => el.style.visibility = "hidden");
+
+            html2pdf().set(options).from(element).save().then(() => {
+                pdfHeader.style.display = "none";
+                if (openingInput && replacement) { openingInput.style.display = "block"; replacement.remove(); }
+                document.querySelectorAll(".pdf-exclude").forEach(el => el.style.visibility = "visible");
+                showToast("PDF başarıyla indirildi.");
+            }).catch(err => {
+                pdfHeader.style.display = "none";
+                if (openingInput && replacement) { openingInput.style.display = "block"; replacement.remove(); }
+                document.querySelectorAll(".pdf-exclude").forEach(el => el.style.visibility = "visible");
+                showToast("PDF oluşturulamadı!", true);
+            });
+        }
+
+        window.onload = function() { initApp(); };
+    </script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
