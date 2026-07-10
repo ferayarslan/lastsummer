@@ -4,8 +4,279 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Last Summer Cafe POS - Dijital Otomasyon Paneli</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&family=Poppins:wght=400;500;600;700&display=swap" rel="stylesheet"></link>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7faf8;
+        }
+        .font-poppins {
+            font-family: 'Poppins', sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3D5A46;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #20B2AA;
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased min-h-screen flex flex-col">
+
+    <header class="bg-gradient-to-r from-[#2C4A3E] to-[#3D5A46] text-white shadow-md sticky top-0 z-50 pdf-exclude">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-[#20B2AA] rounded-xl flex items-center justify-between p-2 shadow-inner">
+                    <span class="text-xl font-bold tracking-wider font-poppins">LS</span>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold font-poppins tracking-wide leading-tight">Last Summer</h1>
+                    <p class="text-xs text-[#20B2AA] font-medium tracking-wider uppercase">Cafe Otomasyonu</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span id="liveClock" class="text-sm font-mono bg-[#233B32] px-3 py-1.5 rounded-lg border border-emerald-800 text-emerald-300">00:00:00</span>
+                <span id="dbStatus" class="flex items-center text-xs bg-amber-900/40 text-amber-300 border border-amber-700/50 px-2.5 py-1.5 rounded-lg">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse mr-2"></span>Bağlanıyor...
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <div id="pdfHeader" class="hidden bg-white p-6 border-b-2 border-[#3D5A46] mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-[#3D5A46] font-poppins">LAST SUMMER CAFE</h1>
+            <p class="text-sm text-gray-500">Gün Sonu Raporu ve Kasa Özeti</p>
+        </div>
+        <div class="text-right">
+            <p id="pdfDate" class="text-sm font-semibold text-gray-700"></p>
+            <p class="text-xs text-gray-400">Dijital Otomasyon Sistemi</p>
+        </div>
+    </div>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <div id="printArea" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all hover:shadow-md">
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Açılış Kasası</p>
+                    <input type="number" id="openingCash" class="w-28 text-2xl font-bold text-gray-700 border-b border-dashed border-gray-300 focus:border-[#3D5A46] focus:outline-none bg-transparent pdf-exclude" value="0" min="0" step="any">
+                </div>
+                <div class="p-3 bg-gray-50 rounded-xl text-gray-400 text-2xl">💵</div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all hover:shadow-md">
+                <div>
+                    <p class="text-xs font-bold text-[#3D5A46] uppercase tracking-wider mb-1">Toplam Ciro</p>
+                    <h3 id="totalRevenue" class="text-2xl font-bold text-gray-800">0.00 ₺</h3>
+                </div>
+                <div class="p-3 bg-emerald-50 text-[#3D5A46] rounded-xl text-2xl">📈</div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all hover:shadow-md">
+                <div>
+                    <p class="text-xs font-bold text-rose-500 uppercase tracking-wider mb-1">Toplam Gider</p>
+                    <h3 id="totalExpenses" class="text-2xl font-bold text-gray-800">0.00 ₺</h3>
+                </div>
+                <div class="p-3 bg-rose-50 text-rose-500 rounded-xl text-2xl">📉</div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all hover:shadow-md">
+                <div>
+                    <p class="text-xs font-bold text-[#20B2AA] uppercase tracking-wider mb-1">Net Kasa (Kalan)</p>
+                    <h3 id="netBalance" class="text-2xl font-bold text-gray-800">0.00 ₺</h3>
+                </div>
+                <div class="p-3 bg-teal-50 text-[#20B2AA] rounded-xl text-2xl">💰</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="space-y-8 pdf-exclude">
+                <section class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h2 class="text-base font-bold text-gray-800 mb-4 flex items-center font-poppins">
+                        <span class="w-1.5 h-4 bg-[#3D5A46] rounded-full mr-2"></span>Yeni Sipariş Ekle
+                    </h2>
+                    <form id="orderForm" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Ürün / Sipariş Seçin</label>
+                            <select id="orderItem" required onchange="updateProductPrice()" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#3D5A46]/20 focus:border-[#3D5A46] focus:outline-none transition-all text-sm bg-white">
+                                <option value="" data-price="" disabled selected>Ürün Seçiniz...</option>
+                                <optgroup label="Kahve & Çay">
+                                    <option value="Türk Kahvesi" data-price="100">Türk Kahvesi (100 TL)</option>
+                                    <option value="Çay" data-price="30">Çay (30 TL)</option>
+                                    <option value="Sıcak Kahve Çeşitleri" data-price="150">Sıcak Kahve Çeşitleri (150 TL)</option>
+                                    <option value="Soğuk Kahve" data-price="150">Soğuk Kahve (150 TL)</option>
+                                </optgroup>
+                                <optgroup label="Soğuk İçecekler & Su">
+                                    <option value="Kola, Fanta, Sprite, Fuse Tea" data-price="80">Kola / Fanta / Sprite / Fuse Tea (80 TL)</option>
+                                    <option value="Meyve Suyu" data-price="50">Meyve Suyu (50 TL)</option>
+                                    <option value="Sade Soda" data-price="30">Sade Soda (30 TL)</option>
+                                    <option value="Meyveli Soda" data-price="35">Meyveli Soda (35 TL)</option>
+                                    <option value="Erikli Su" data-price="25">Erikli Su (25 TL)</option>
+                                    <option value="Damla Su" data-price="20">Damla Su (20 TL)</option>
+                                </optgroup>
+                                <optgroup label="Yiyecekler & Atıştırmalıklar">
+                                    <option value="Hamburger" data-price="300">Hamburger (300 TL)</option>
+                                    <option value="Atıştırma Tabağı" data-price="250">Atıştırma Tabağı (250 TL)</option>
+                                    <option value="Tost Çeşitleri" data-price="200">Tost Çeşitleri (200 TL)</option>
+                                    <option value="Patates Kızartması" data-price="100">Patates Kızartması (100 TL)</option>
+                                    <option value="Soğuk Sandviç" data-price="80">Soğuk Sandviç (80 TL)</option>
+                                    <option value="PatSo" data-price="80">PatSo (80 TL)</option>
+                                    <option value="Poğaça" data-price="30">Poğaça (30 TL)</option>
+                                </optgroup>
+                                <optgroup label="Tatlılar">
+                                    <option value="Kap Tatlılar" data-price="80">Kap Tatlılar (80 TL)</option>
+                                    <option value="Tiramisu" data-price="80">Tiramisu (80 TL)</option>
+                                </optgroup>
+                                <optgroup label="Dondurmalar">
+                                    <option value="Magnum Çeşitleri" data-price="120">Magnum Çeşitleri (120 TL)</option>
+                                    <option value="Twister" data-price="120">Twister (120 TL)</option>
+                                    <option value="Disc" data-price="90">Disc (90 TL)</option>
+                                    <option value="Nogger" data-price="80">Nogger (80 TL)</option>
+                                    <option value="Volcano" data-price="80">Volcano (80 TL)</option>
+                                    <option value="Frigola" data-price="60">Frigola (60 TL)</option>
+                                    <option value="Cornetto" data-price="50">Cornetto (50 TL)</option>
+                                    <option value="Classics" data-price="30">Classics (30 TL)</option>
+                                    <option value="Keyif" data-price="30">Keyif (30 TL)</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">Tutar (₺)</label>
+                                <input type="number" id="orderAmount" required min="0" step="any" placeholder="0.00" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#3D5A46]/20 focus:border-[#3D5A46] focus:outline-none transition-all placeholder-gray-300 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">Ödeme Türü</label>
+                                <select id="orderPayment" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#3D5A46]/20 focus:border-[#3D5A46] focus:outline-none transition-all text-sm bg-white">
+                                    <option value="Nakit">Nakit</option>
+                                    <option value="Kredi Kartı">Kredi Kartı</option>
+                                    <option value="Havale">Havale/EFT</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-[#3D5A46] hover:bg-[#2C4A3E] text-white font-medium py-2.5 px-4 rounded-xl shadow-sm hover:shadow transition-all text-sm flex items-center justify-center space-x-1">
+                            <span>➕</span> <span>Siparişi İşle</span>
+                        </button>
+                    </form>
+                </section>
+
+                <section class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h2 class="text-base font-bold text-gray-800 mb-4 flex items-center font-poppins">
+                        <span class="w-1.5 h-4 bg-rose-500 rounded-full mr-2"></span>Yeni Gider Ekle
+                    </h2>
+                    <form id="expenseForm" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">Gider Açıklaması</label>
+                            <input type="text" id="expenseItem" required placeholder="Örn: Manav Alışverişi, Toptancı, Elektrik" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-none transition-all placeholder-gray-300 text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">Tutar (₺)</label>
+                                <input type="number" id="expenseAmount" required min="0" step="any" placeholder="0.00" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-none transition-all placeholder-gray-300 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">Kategori</label>
+                                <select id="expenseCategory" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-none transition-all text-sm bg-white">
+                                    <option value="Mal Alımı">Mal / Ürün Alımı</option>
+                                    <option value="Personel">Personel / Maaş</option>
+                                    <option value="Fatura">Fatura / Kira</option>
+                                    <option value="Diğer">Diğer Giderler</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-medium py-2.5 px-4 rounded-xl shadow-sm hover:shadow transition-all text-sm flex items-center justify-center space-x-1">
+                            <span>💸</span> <span>Gideri İşle</span>
+                        </button>
+                    </form>
+                </section>
+                
+                <button onclick="downloadPDF()" class="w-full bg-[#20B2AA] hover:bg-[#1a9992] text-white font-medium py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition-all text-sm flex items-center justify-center space-x-2">
+                    <span>📄</span> <span>Gün Sonu Raporunu PDF Olarak İndir</span>
+                </button>
+            </div>
+
+            <div class="lg:col-span-2 space-y-8" id="listsContainer">
+                <section class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-6 border-b border-gray-50 flex items-center justify-between pdf-exclude">
+                        <h2 class="text-base font-bold text-gray-800 flex items-center font-poppins">
+                            <span class="w-1.5 h-4 bg-[#3D5A46] rounded-full mr-2"></span>Bugünkü Siparişler
+                        </h2>
+                        <span id="orderCount" class="text-xs font-semibold bg-emerald-50 text-[#3D5A46] px-2.5 py-1 rounded-full">0 Sipariş</span>
+                    </div>
+                    <div class="hidden pdf-show p-4 bg-gray-50 font-bold text-sm text-gray-700 border-b">
+                        🧾 Sipariş Detayları Listesi
+                    </div>
+                    <div class="overflow-x-auto max-h-[320px] overflow-y-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50/70 text-gray-400 text-[11px] font-bold uppercase tracking-wider border-b border-gray-100">
+                                    <th class="py-3 px-6">Zaman</th>
+                                    <th class="py-3 px-6">Sipariş / Ürün</th>
+                                    <th class="py-3 px-6">Tür</th>
+                                    <th class="py-3 px-6 text-right">Tutar</th>
+                                    <th class="py-3 px-4 text-center pdf-exclude">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orderTableBody" class="divide-y divide-gray-100 text-sm text-gray-600">
+                            </tbody>
+                        </table>
+                        <div id="noOrders" class="p-8 text-center text-gray-400 text-xs">Henüz kayıtlı bir sipariş bulunmuyor.</div>
+                    </div>
+                </section>
+
+                <section class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-6 border-b border-gray-50 flex items-center justify-between pdf-exclude">
+                        <h2 class="text-base font-bold text-gray-800 flex items-center font-poppins">
+                            <span class="w-1.5 h-4 bg-rose-500 rounded-full mr-2"></span>Bugünkü Giderler
+                        </h2>
+                        <span id="expenseCount" class="text-xs font-semibold bg-rose-50 text-rose-500 px-2.5 py-1 rounded-full">0 Gider</span>
+                    </div>
+                    <div class="hidden pdf-show p-4 bg-gray-50 font-bold text-sm text-gray-700 border-b">
+                        📉 Gider Detayları Listesi
+                    </div>
+                    <div class="overflow-x-auto max-h-[320px] overflow-y-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50/70 text-gray-400 text-[11px] font-bold uppercase tracking-wider border-b border-gray-100">
+                                    <th class="py-3 px-6">Zaman</th>
+                                    <th class="py-3 px-6">Gider Açıklaması</th>
+                                    <th class="py-3 px-6">Kategori</th>
+                                    <th class="py-3 px-6 text-right">Tutar</th>
+                                    <th class="py-3 px-4 text-center pdf-exclude">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenseTableBody" class="divide-y divide-gray-100 text-sm text-gray-600">
+                            </tbody>
+                        </table>
+                        <div id="noExpenses" class="p-8 text-center text-gray-400 text-xs">Henüz kayıtlı bir gider bulunmuyor.</div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white border-t border-gray-100 py-4 mt-12 pdf-exclude">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-gray-400">
+            &copy; 2026 Last Summer Cafe • Dijital POS & Otomasyon Sistemi Veritabanı Entegrasyonu
+        </div>
+    </footer>
+
+    <div id="toast" class="fixed bottom-6 right-6 transform translate-y-20 opacity-0 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl transition-all duration-300 text-sm flex items-center space-x-2 z-50">
+        <span id="toastIcon">⚠️</span>
+        <span id="toastMessage">İşlem Durumu</span>
+    </div>
+
     <script>
-        // Yeni oluşturduğunuz Google Apps Script Web Uygulaması URL'niz buraya entegre edildi
         const scriptURL = 'https://script.google.com/macros/s/AKfycbwpVmJytRPAeuSbTgQbFpmJ5e2z3zDkof3NZYWGNXxPM7GpiXSdWDGs8wN0F9-MnuJb7g/exec';
 
         let appData = {
@@ -13,7 +284,6 @@
             expenses: []
         };
 
-        // Fiyatı otomatik dolduran fonksiyon
         function updateProductPrice() {
             const selectEl = document.getElementById('orderItem');
             const selectedOption = selectEl.options[selectEl.selectedIndex];
@@ -52,21 +322,18 @@
             fetchDataFromGoogleSheets();
         }
 
-        // Google E-Tablodan verileri çeken fonksiyon (syncAll yapısına uyumlu hale getirildi)
         function fetchDataFromGoogleSheets() {
             const statusEl = document.getElementById('dbStatus');
             fetch(scriptURL)
                 .then(response => response.json())
                 .then(data => {
-                    // E-Tablodaki sekmelerden gelen verileri appData içerisine aktarıyoruz
                     appData.orders = data.Siparişler || [];
                     appData.expenses = data.Giderler || [];
                     
-                    // Gelen verilerdeki tablo başlıklarını (id, zaman vb.) sitenin anlayacağı dile (urun, tur, tutar) çeviriyoruz
                     appData.orders = appData.orders.map(item => ({
                         id: item.id,
                         zaman: item.time,
-                        urun: item.table, // Siteniz tablo/ürün bilgisini urun alanında gösteriyor
+                        urun: item.table,
                         tur: item.payment,
                         tutar: item.total
                     }));
@@ -161,7 +428,6 @@
             renderTables();
             updateCalculations();
             
-            // Veriyi anlık olarak Google E-Tabloya gönderiyoruz
             sendAllDataToGoogleSheets();
             
             inputItem.selectedIndex = 0;
@@ -188,17 +454,14 @@
             renderTables();
             updateCalculations();
             
-            // Veriyi anlık olarak Google E-Tabloya gönderiyoruz
             sendAllDataToGoogleSheets();
             
             inputItem.value = '';
             inputAmount.value = '';
         }
 
-        // Sitenizdeki tüm verileri E-Tablonuzdaki sekmelere topluca gönderen yeni akıllı fonksiyon
         function sendAllDataToGoogleSheets() {
-            // Apps script kodundaki sütun sıralamasına göre verileri hazırlıyoruz
-            const productsFormatted = []; // Eğer ilerde ürünler sekmesini de doldurmak isterseniz buraya ekleme yapabilirsiniz.
+            const productsFormatted = [];
             const stocksFormatted = [];
             
             const expensesFormatted = appData.expenses.map(ex => ({
@@ -212,10 +475,10 @@
             const ordersFormatted = appData.orders.map(o => ({
                 id: o.id,
                 time: o.zaman,
-                table: o.urun,     // Sitenizdeki 'urun' bilgisini E-Tabloda 'table' sütununa yazar
-                payment: o.tur,    // Ödeme türü -> payment
-                total: o.tutar,    // Tutar -> total
-                profit: (parseFloat(o.tutar) * 0.7).toFixed(2), // Örnek kâr marjı hesabı (%70)
+                table: o.urun,
+                payment: o.tur,
+                total: o.tutar,
+                profit: (parseFloat(o.tutar) * 0.7).toFixed(2),
                 items: "[]"
             }));
 
@@ -229,7 +492,7 @@
 
             fetch(scriptURL, {
                 method: 'POST',
-                mode: 'no-cors', // CORS engeline takılmamak için şarttır
+                mode: 'no-cors',
                 cache: 'no-cache',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(veriPaketi)
@@ -253,7 +516,6 @@
             
             renderTables();
             updateCalculations();
-            // Silme işleminden sonra da bulut veritabanını güncelliyoruz
             sendAllDataToGoogleSheets();
         }
 
@@ -282,549 +544,6 @@
                 html2canvas: { scale: 2, useCORS: true },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
-            document.querySelectorAll(".pdf-exclude").forEach(el => el.style.visibility = "hidden");
-
-            html2pdf().set(options).from(element).save().then(() => {
-                pdfHeader.style.display = "none";
-                if (openingInput && replacement) { openingInput.style.display = "block"; replacement.remove(); }
-                document.querySelectorAll(".pdf-exclude").forEach(el => el.style.visibility = "visible");
-                showToast("PDF başarıyla indirildi.");
-            }).catch(err => {
-                pdfHeader.style.display = "none";
-                if (openingInput && replacement) { openingInput.style.display = "block"; replacement.remove(); }
-                document.querySelectorAll(".pdf-exclude").forEach(el => el.style.visibility = "visible");
-                showToast("PDF oluşturulamadı!", true);
-            });
-        }
-
-        window.onload = function() { initApp(); };
-    </script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7faf8;
-        }
-        .font-poppins {
-            font-family: 'Poppins', sans-serif;
-        }
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #3D5A46;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #20B2AA;
-        }
-    </style>
-</head>
-<body class="text-gray-800 antialiased min-h-screen flex flex-col">
-
-    <!-- Üst Menü / Navbar -->
-    <header class="bg-gradient-to-r from-[#2C4A3E] to-[#3D5A46] text-white shadow-md sticky top-0 z-50 pdf-exclude">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-[#20B2AA] rounded-xl flex items-center justify-between p-2 shadow-inner">
-                    <span class="text-xl font-bold tracking-wider font-poppins">LS</span>
-                </div>
-                <div>
-                    <h1 class="text-lg font-bold font-poppins tracking-wide leading-tight">Last Summer</h1>
-                    <p class="text-xs text-[#20B2AA] font-medium tracking-wider uppercase">Cafe Otomasyonu</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-4">
-                <span id="liveClock" class="text-sm font-mono bg-[#233B32] px-3 py-1.5 rounded-lg border border-emerald-800 text-emerald-300">00:00:00</span>
-                <span id="dbStatus" class="flex items-center text-xs bg-amber-900/40 text-amber-300 border border-amber-700/50 px-2.5 py-1.5 rounded-lg">
-                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse mr-2"></span>Bağlanıyor...
-                </span>
-            </div>
-        </div>
-    </header>
-
-    <!-- PDF Üst Bilgi (Normalde Gizli) -->
-    <div id="pdfHeader" class="hidden bg-white p-6 border-b-2 border-[#3D5A46] mb-6 flex justify-between items-center">
-        <div>
-            <h1 class="text-2xl font-bold text-[#3D5A46] font-poppins">LAST SUMMER CAFE</h1>
-            <p class="text-sm text-gray-500">Gün Sonu Raporu ve Kasa Özeti</p>
-        </div>
-        <div class="text-right">
-            <p id="pdfDate" class="text-sm font-semibold text-gray-700"></p>
-            <p class="text-xs text-gray-400">Dijital Otomasyon Sistemi</p>
-        </div>
-    </div>
-
-    <!-- Ana İçerik Alanı -->
-    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        <!-- Raporlama ve Özet Kartları -->
-        <div id="printArea" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all hover:shadow-md">
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Açılış Kasası</p>
-                    <input type="number" id="openingCash" class="w-28 text-2xl font-bold text-gray-700 border-b border-dashed border-gray-300 focus:border-[#3D5A46] focus:outline-none bg-transparent pdf-exclude" value="0" min="0" step="any">
-                </div>
-                <div class="p-3 bg-gray-50 rounded-xl text-gray-400 text-2xl">💵</div>
-            </div>
-
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all hover:shadow-md">
-                <div>
-                    <p class="text-xs font-bold text-[#3D5A46] uppercase tracking-wider mb-1">Toplam Ciro</p>
-                    <h3 id="totalRevenue" class="text-2xl font-bold text-gray-800">0.00 ₺</h3>
-                </div>
-                <div class="p-3 bg-emerald-50 text-[#3D5A46] rounded-xl text-2xl">📈</div>
-            </div>
-
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all hover:shadow-md">
-                <div>
-                    <p class="text-xs font-bold text-rose-500 uppercase tracking-wider mb-1">Toplam Gider</p>
-                    <h3 id="totalExpenses" class="text-2xl font-bold text-gray-800">0.00 ₺</h3>
-                </div>
-                <div class="p-3 bg-rose-50 text-rose-500 rounded-xl text-2xl">📉</div>
-            </div>
-
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all hover:shadow-md">
-                <div>
-                    <p class="text-xs font-bold text-[#20B2AA] uppercase tracking-wider mb-1">Net Kasa (Kalan)</p>
-                    <h3 id="netBalance" class="text-2xl font-bold text-gray-800">0.00 ₺</h3>
-                </div>
-                <div class="p-3 bg-teal-50 text-[#20B2AA] rounded-xl text-2xl">💰</div>
-            </div>
-        </div>
-
-        <!-- İşlem Formları ve Listeler -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Sol Sütun: Formlar -->
-            <div class="space-y-8 pdf-exclude">
-                <!-- Sipariş Ekleme Formu -->
-                <section class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h2 class="text-base font-bold text-gray-800 mb-4 flex items-center font-poppins">
-                        <span class="w-1.5 h-4 bg-[#3D5A46] rounded-full mr-2"></span>Yeni Sipariş Ekle
-                    </h2>
-                    <form id="orderForm" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">Ürün / Sipariş Seçin</label>
-                            <!-- DEFTERDEKI TAVIZSIZ GERÇEK MENÜ LISTESI -->
-                            <select id="orderItem" required onchange="updateProductPrice()" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#3D5A46]/20 focus:border-[#3D5A46] focus:outline-none transition-all text-sm bg-white">
-                                <option value="" data-price="" disabled selected>Ürün Seçiniz...</option>
-                                <optgroup label="Kahve & Çay">
-                                    <option value="Türk Kahvesi" data-price="100">Türk Kahvesi (100 TL)</option>
-                                    <option value="Çay" data-price="30">Çay (30 TL)</option>
-                                    <option value="Sıcak Kahve Çeşitleri" data-price="150">Sıcak Kahve Çeşitleri (150 TL)</option>
-                                    <option value="Soğuk Kahve" data-price="150">Soğuk Kahve (150 TL)</option>
-                                </optgroup>
-                                <optgroup label="Soğuk İçecekler & Su">
-                                    <option value="Kola, Fanta, Sprite, Fuse Tea" data-price="80">Kola / Fanta / Sprite / Fuse Tea (80 TL)</option>
-                                    <option value="Meyve Suyu" data-price="50">Meyve Suyu (50 TL)</option>
-                                    <option value="Sade Soda" data-price="30">Sade Soda (30 TL)</option>
-                                    <option value="Meyveli Soda" data-price="35">Meyveli Soda (35 TL)</option>
-                                    <option value="Erikli Su" data-price="25">Erikli Su (25 TL)</option>
-                                    <option value="Damla Su" data-price="20">Damla Su (20 TL)</option>
-                                </optgroup>
-                                <optgroup label="Yiyecekler & Atıştırmalıklar">
-                                    <option value="Hamburger" data-price="300">Hamburger (300 TL)</option>
-                                    <option value="Atıştırma Tabağı" data-price="250">Atıştırma Tabağı (250 TL)</option>
-                                    <option value="Tost Çeşitleri" data-price="200">Tost Çeşitleri (200 TL)</option>
-                                    <option value="Patates Kızartması" data-price="100">Patates Kızartması (100 TL)</option>
-                                    <option value="Soğuk Sandviç" data-price="80">Soğuk Sandviç (80 TL)</option>
-                                    <option value="PatSo" data-price="80">PatSo (80 TL)</option>
-                                    <option value="Poğaça" data-price="30">Poğaça (30 TL)</option>
-                                </optgroup>
-                                <optgroup label="Tatlılar">
-                                    <option value="Kap Tatlılar" data-price="80">Kap Tatlılar (80 TL)</option>
-                                    <option value="Tiramisu" data-price="80">Tiramisu (80 TL)</option>
-                                </optgroup>
-                                <optgroup label="Dondurmalar">
-                                    <option value="Magnum Çeşitleri" data-price="120">Magnum Çeşitleri (120 TL)</option>
-                                    <option value="Twister" data-price="120">Twister (120 TL)</option>
-                                    <option value="Disc" data-price="90">Disc (90 TL)</option>
-                                    <option value="Nogger" data-price="80">Nogger (80 TL)</option>
-                                    <option value="Volcano" data-price="80">Volcano (80 TL)</option>
-                                    <option value="Frigola" data-price="60">Frigola (60 TL)</option>
-                                    <option value="Cornetto" data-price="50">Cornetto (50 TL)</option>
-                                    <option value="Classics" data-price="30">Classics (30 TL)</option>
-                                    <option value="Keyif" data-price="30">Keyif (30 TL)</option>
-                                </optgroup>
-                            </select>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-500 mb-1">Tutar (₺)</label>
-                                <input type="number" id="orderAmount" required min="0" step="any" placeholder="0.00" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#3D5A46]/20 focus:border-[#3D5A46] focus:outline-none transition-all placeholder-gray-300 text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-500 mb-1">Ödeme Türü</label>
-                                <select id="orderPayment" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#3D5A46]/20 focus:border-[#3D5A46] focus:outline-none transition-all text-sm bg-white">
-                                    <option value="Nakit">Nakit</option>
-                                    <option value="Kredi Kartı">Kredi Kartı</option>
-                                    <option value="Havale">Havale/EFT</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-[#3D5A46] hover:bg-[#2C4A3E] text-white font-medium py-2.5 px-4 rounded-xl shadow-sm hover:shadow transition-all text-sm flex items-center justify-center space-x-1">
-                            <span>➕</span> <span>Siparişi İşle</span>
-                        </button>
-                    </form>
-                </section>
-
-                <!-- Gider Ekleme Formu -->
-                <section class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h2 class="text-base font-bold text-gray-800 mb-4 flex items-center font-poppins">
-                        <span class="w-1.5 h-4 bg-rose-500 rounded-full mr-2"></span>Yeni Gider Ekle
-                    </h2>
-                    <form id="expenseForm" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">Gider Açıklaması</label>
-                            <input type="text" id="expenseItem" required placeholder="Örn: Manav Alışverişi, Toptancı, Elektrik" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-none transition-all placeholder-gray-300 text-sm">
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-500 mb-1">Tutar (₺)</label>
-                                <input type="number" id="expenseAmount" required min="0" step="any" placeholder="0.00" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-none transition-all placeholder-gray-300 text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-500 mb-1">Kategori</label>
-                                <select id="expenseCategory" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-none transition-all text-sm bg-white">
-                                    <option value="Mal Alımı">Mal / Ürün Alımı</option>
-                                    <option value="Personel">Personel / Maaş</option>
-                                    <option value="Fatura">Fatura / Kira</option>
-                                    <option value="Diğer">Diğer Giderler</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-medium py-2.5 px-4 rounded-xl shadow-sm hover:shadow transition-all text-sm flex items-center justify-center space-x-1">
-                            <span>💸</span> <span>Gideri İşle</span>
-                        </button>
-                    </form>
-                </section>
-                
-                <!-- PDF İndir Butonu -->
-                <button onclick="downloadPDF()" class="w-full bg-[#20B2AA] hover:bg-[#1a9992] text-white font-medium py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition-all text-sm flex items-center justify-center space-x-2">
-                    <span>📄</span> <span>Gün Sonu Raporunu PDF Olarak İndir</span>
-                </button>
-            </div>
-
-            <!-- Sağ Sütun: Listeler ve Tablolar -->
-            <div class="lg:col-span-2 space-y-8" id="listsContainer">
-                <!-- Siparişler Listesi -->
-                <section class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="p-6 border-b border-gray-50 flex items-center justify-between pdf-exclude">
-                        <h2 class="text-base font-bold text-gray-800 flex items-center font-poppins">
-                            <span class="w-1.5 h-4 bg-[#3D5A46] rounded-full mr-2"></span>Bugünkü Siparişler
-                        </h2>
-                        <span id="orderCount" class="text-xs font-semibold bg-emerald-50 text-[#3D5A46] px-2.5 py-1 rounded-full">0 Sipariş</span>
-                    </div>
-                    <div class="hidden pdf-show p-4 bg-gray-50 font-bold text-sm text-gray-700 border-b">
-                        🧾 Sipariş Detayları Listesi
-                    </div>
-                    <div class="overflow-x-auto max-h-[320px] overflow-y-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-gray-50/70 text-gray-400 text-[11px] font-bold uppercase tracking-wider border-b border-gray-100">
-                                    <th class="py-3 px-6">Zaman</th>
-                                    <th class="py-3 px-6">Sipariş / Ürün</th>
-                                    <th class="py-3 px-6">Tür</th>
-                                    <th class="py-3 px-6 text-right">Tutar</th>
-                                    <th class="py-3 px-4 text-center pdf-exclude">İşlem</th>
-                                </tr>
-                            </thead>
-                            <tbody id="orderTableBody" class="divide-y divide-gray-100 text-sm text-gray-600">
-                            </tbody>
-                        </table>
-                        <div id="noOrders" class="p-8 text-center text-gray-400 text-xs">Henüz kayıtlı bir sipariş bulunmuyor.</div>
-                    </div>
-                </section>
-
-                <!-- Giderler Listesi -->
-                <section class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="p-6 border-b border-gray-50 flex items-center justify-between pdf-exclude">
-                        <h2 class="text-base font-bold text-gray-800 flex items-center font-poppins">
-                            <span class="w-1.5 h-4 bg-rose-500 rounded-full mr-2"></span>Bugünkü Giderler
-                        </h2>
-                        <span id="expenseCount" class="text-xs font-semibold bg-rose-50 text-rose-500 px-2.5 py-1 rounded-full">0 Gider</span>
-                    </div>
-                    <div class="hidden pdf-show p-4 bg-gray-50 font-bold text-sm text-gray-700 border-b">
-                        📉 Gider Detayları Listesi
-                    </div>
-                    <div class="overflow-x-auto max-h-[320px] overflow-y-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-gray-50/70 text-gray-400 text-[11px] font-bold uppercase tracking-wider border-b border-gray-100">
-                                    <th class="py-3 px-6">Zaman</th>
-                                    <th class="py-3 px-6">Gider Açıklaması</th>
-                                    <th class="py-3 px-6">Kategori</th>
-                                    <th class="py-3 px-6 text-right">Tutar</th>
-                                    <th class="py-3 px-4 text-center pdf-exclude">İşlem</th>
-                                </tr>
-                            </thead>
-                            <tbody id="expenseTableBody" class="divide-y divide-gray-100 text-sm text-gray-600">
-                            </tbody>
-                        </table>
-                        <div id="noExpenses" class="p-8 text-center text-gray-400 text-xs">Henüz kayıtlı bir gider bulunmuyor.</div>
-                    </div>
-                </section>
-            </div>
-        </div>
-    </main>
-
-    <!-- Alt Bilgi / Footer -->
-    <footer class="bg-white border-t border-gray-100 py-4 mt-12 pdf-exclude">
-        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-gray-400">
-            &copy; 2026 Last Summer Cafe • Dijital POS & Otomasyon Sistemi Veritabanı Entegrasyonu
-        </div>
-    </footer>
-
-    <!-- Bildirim Balonu (Toast) -->
-    <div id="toast" class="fixed bottom-6 right-6 transform translate-y-20 opacity-0 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl transition-all duration-300 text-sm flex items-center space-x-2 z-50">
-        <span id="toastIcon">⚠️</span>
-        <span id="toastMessage">İşlem Durumu</span>
-    </div>
-
-    <!-- SİSTEM KODLARI VE VERİTABANI BAĞLANTISI -->
-    <script>
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbwnN84Ie7N5A3eBped9pFgynn7T5ZL2iHW4Z35sRXg65nv7lPpMP873Kll2ZwT48qD7xg/exec';
-
-        let appData = {
-            orders: [],
-            expenses: []
-        };
-
-        // Fiyatı otomatik dolduran fonksiyon
-        function updateProductPrice() {
-            const selectEl = document.getElementById('orderItem');
-            const selectedOption = selectEl.options[selectEl.selectedIndex];
-            const price = selectedOption.getAttribute('data-price');
-            
-            if (price) {
-                document.getElementById('orderAmount').value = price;
-            }
-        }
-
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('liveClock').innerText = now.toTimeString().split(' ')[0];
-        }, 1000);
-
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            const icon = document.getElementById('toastIcon');
-            const msg = document.getElementById('toastMessage');
-            
-            icon.innerText = isError ? "❌" : "✅";
-            msg.innerText = message;
-            
-            toast.className = `fixed bottom-6 right-6 transform translate-y-0 opacity-100 px-5 py-3 rounded-xl shadow-xl transition-all duration-300 text-sm flex items-center space-x-2 z-50 ${isError ? 'bg-rose-600 text-white' : 'bg-gray-900 text-white'}`;
-            
-            setTimeout(() => {
-                toast.className = "fixed bottom-6 right-6 transform translate-y-20 opacity-0 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-xl transition-all duration-300 text-sm flex items-center space-x-2 z-50";
-            }, 3000);
-        }
-
-        function initApp() {
-            updateCalculations();
-            document.getElementById('openingCash').addEventListener('input', updateCalculations);
-            document.getElementById('orderForm').addEventListener('submit', handleOrderSubmit);
-            document.getElementById('expenseForm').addEventListener('submit', handleExpenseSubmit);
-            fetchDataFromGoogleSheets();
-        }
-
-        function fetchDataFromGoogleSheets() {
-            const statusEl = document.getElementById('dbStatus');
-            fetch(`${scriptURL}?action=read`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        appData.orders = data.orders || [];
-                        appData.expenses = data.expenses || [];
-                        renderTables();
-                        updateCalculations();
-                        statusEl.className = "flex items-center text-xs bg-emerald-950/40 text-emerald-400 border border-emerald-800/50 px-2.5 py-1.5 rounded-lg";
-                        statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 mr-2"></span>Bulut Veritabanı Aktif';
-                    } else {
-                        throw new Error('Veri çekme hatası');
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    statusEl.className = "flex items-center text-xs bg-rose-950/40 text-rose-400 border border-rose-800/50 px-2.5 py-1.5 rounded-lg";
-                    statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500 mr-2"></span>Çevrimdışı (Yerel Mod)';
-                    showToast("Google Veritabanına bağlanılamadı, işlemler tarayıcıda tutulacak.", true);
-                });
-        }
-
-        function renderTables() {
-            const orderBody = document.getElementById('orderTableBody');
-            const expenseBody = document.getElementById('expenseTableBody');
-            orderBody.innerHTML = '';
-            expenseBody.innerHTML = '';
-            
-            document.getElementById('noOrders').style.display = appData.orders.length === 0 ? 'block' : 'none';
-            document.getElementById('noExpenses').style.display = appData.expenses.length === 0 ? 'block' : 'none';
-            document.getElementById('orderCount').innerText = `${appData.orders.length} Sipariş`;
-            document.getElementById('expenseCount').innerText = `${appData.expenses.length} Gider`;
-
-            appData.orders.forEach((item) => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50/50 transition-colors";
-                tr.innerHTML = `
-                    <td class="py-3 px-6 text-xs text-gray-400 font-mono">${item.zaman || ''}</td>
-                    <td class="py-3 px-6 font-medium text-gray-700">${item.urun || ''}</td>
-                    <td class="py-3 px-6"><span class="px-2 py-0.5 rounded-md text-[11px] font-semibold ${item.tur === 'Nakit' ? 'bg-emerald-50 text-emerald-700' : item.tur === 'Kredi Kartı' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}">${item.tur || ''}</span></td>
-                    <td class="py-3 px-6 text-right font-bold text-gray-700">${parseFloat(item.tutar || 0).toFixed(2)} ₺</td>
-                    <td class="py-3 px-4 text-center pdf-exclude"><button onclick="deleteRow('${item.id}', 'order')" class="text-gray-300 hover:text-rose-500 transition-colors p-1">🗑️</button></td>
-                `;
-                orderBody.appendChild(tr);
-            });
-
-            appData.expenses.forEach((item) => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50/50 transition-colors";
-                tr.innerHTML = `
-                    <td class="py-3 px-6 text-xs text-gray-400 font-mono">${item.zaman || ''}</td>
-                    <td class="py-3 px-6 font-medium text-gray-700">${item.urun || ''}</td>
-                    <td class="py-3 px-6"><span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-700">${item.tur || 'Gider'}</span></td>
-                    <td class="py-3 px-6 text-right font-bold text-rose-600">-${parseFloat(item.tutar || 0).toFixed(2)} ₺</td>
-                    <td class="py-3 px-4 text-center pdf-exclude"><button onclick="deleteRow('${item.id}', 'expense')" class="text-gray-300 hover:text-rose-500 transition-colors p-1">🗑️</button></td>
-                `;
-                expenseBody.appendChild(tr);
-            });
-        }
-
-        function updateCalculations() {
-            const openingCash = parseFloat(document.getElementById('openingCash').value) || 0;
-            const totalRevenue = appData.orders.reduce((sum, item) => sum + (parseFloat(item.tutar) || 0), 0);
-            const totalExpenses = appData.expenses.reduce((sum, item) => sum + (parseFloat(item.tutar) || 0), 0);
-            const netBalance = openingCash + totalRevenue - totalExpenses;
-            
-            document.getElementById('totalRevenue').innerText = totalRevenue.toFixed(2) + " ₺";
-            document.getElementById('totalExpenses').innerText = totalExpenses.toFixed(2) + " ₺";
-            document.getElementById('netBalance').innerText = netBalance.toFixed(2) + " ₺";
-        }
-
-        function handleOrderSubmit(e) {
-            e.preventDefault();
-            const inputItem = document.getElementById('orderItem');
-            const inputAmount = document.getElementById('orderAmount');
-            const inputPayment = document.getElementById('orderPayment');
-            
-            const uniqueId = 'ORD-' + Date.now();
-            const timeStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-            
-            const rowData = {
-                id: uniqueId,
-                zaman: timeStr,
-                urun: inputItem.value,
-                tur: inputPayment.value,
-                tutar: parseFloat(inputAmount.value).toFixed(2)
-            };
-
-            appData.orders.push(rowData);
-            renderTables();
-            updateCalculations();
-            
-            sendDataToGoogleSheets('addOrder', rowData);
-            
-            inputItem.selectedIndex = 0;
-            inputAmount.value = '';
-        }
-
-        function handleExpenseSubmit(e) {
-            e.preventDefault();
-            const inputItem = document.getElementById('expenseItem');
-            const inputAmount = document.getElementById('expenseAmount');
-            const inputCategory = document.getElementById('expenseCategory');
-            
-            const uniqueId = 'EXP-' + Date.now();
-            const timeStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-            
-            const rowData = {
-                id: uniqueId,
-                zaman: timeStr,
-                urun: inputItem.value,
-                tur: inputCategory.value,
-                tutar: parseFloat(inputAmount.value).toFixed(2)
-            };
-
-            appData.expenses.push(rowData);
-            renderTables();
-            updateCalculations();
-            
-            sendDataToGoogleSheets('addExpense', rowData);
-            
-            inputItem.value = '';
-            inputAmount.value = '';
-        }
-
-        function sendDataToGoogleSheets(action, data) {
-            const formData = new URLSearchParams();
-            formData.append('action', action);
-            for (let key in data) {
-                formData.append(key, data[key]);
-            }
-
-            fetch(scriptURL, {
-                method: 'POST',
-                body: formData,
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-            })
-            .then(res => res.json())
-            .then(result => {
-                if(result.status === 'success') {
-                    showToast("İşlem başarıyla buluta kaydedildi.");
-                } else {
-                    showToast("Veri buluta yazılırken bir hata oluştu!", true);
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                showToast("Bağlantı hatası: İşlem yerel bellekte kaldı.", true);
-            });
-        }
-
-        function deleteRow(id, type) {
-            if(!confirm("Bu işlemi silmek istediğinize emin misiniz?")) return;
-            
-            if(type === 'order') {
-                appData.orders = appData.orders.filter(item => item.id !== id);
-                sendDataToGoogleSheets('deleteOrder', { id: id });
-            } else {
-                appData.expenses = appData.expenses.filter(item => item.id !== id);
-                sendDataToGoogleSheets('deleteExpense', { id: id });
-            }
-            
-            renderTables();
-            updateCalculations();
-        }
-
-        function downloadPDF() {
-            const element = document.body;
-            const pdfHeader = document.getElementById("pdfHeader");
-            const now = new Date();
-            
-            document.getElementById("pdfDate").innerText = now.toLocaleDateString('tr-TR') + " - " + now.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
-            pdfHeader.style.display = "flex";
-
-            const openingInput = document.getElementById("openingCash");
-            let replacement = null;
-            if (openingInput) {
-                replacement = document.createElement("span");
-                replacement.className = "text-2xl font-bold text-gray-700";
-                replacement.innerText = parseFloat(openingInput.value).toFixed(2) + " ₺";
-                openingInput.style.display = "none";
-                openingInput.parentNode.appendChild(replacement);
-            }
-
-            const options = {
-                margin: [10, 10, 10, 10],
-                filename: `Last_Summer_Cafe_GunSonu_${now.toISOString().split('T')[0]}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
             document.querySelectorAll(".pdf-exclude").forEach(el => el.style.visibility = "hidden");
 
             html2pdf().set(options).from(element).save().then(() => {
